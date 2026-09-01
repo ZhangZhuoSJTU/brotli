@@ -70,6 +70,8 @@ typedef enum BrotliEncoderBase64Mode {
 
 #define BROTLI_DEFAULT_MAX_BASE64_REGIONS 16
 
+#define BROTLI_DEFAULT_MIN_BASE64_REGION_LEN 2048
+
 /** Options for ::BROTLI_PARAM_SIMD_HASHER parameter. */
 typedef enum BrotliEncoderSimdHasher {
   /** Use SIMD hasher when recommended for the quality level. */
@@ -261,7 +263,14 @@ typedef enum BrotliEncoderParameter {
    * Controls whether the encoder uses SIMD hashers.
    * See ::BrotliEncoderSimdHasher for options.
    */
-  BROTLI_PARAM_SIMD_HASHER = 12
+  BROTLI_PARAM_SIMD_HASHER = 12,
+  /**
+   * Minimum length of a Base64 region to trigger detection and literal block
+   * splitting. Below this threshold, Base64 regions are encoded using standard
+   * LZ77 and Huffman coding.
+   * Default is 2048.
+   */
+  BROTLI_PARAM_MIN_BASE64_REGION_LEN = 14
 } BrotliEncoderParameter;
 
 /**
