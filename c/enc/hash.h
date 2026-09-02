@@ -291,6 +291,10 @@ static BROTLI_INLINE size_t BackwardMatchLengthCode(const BackwardMatch* self) {
 #include "hash_longest_match_simd_inc.h" /* NOLINT(build/include) */
 #undef HASHER
 
+#define HASHER() H59
+#include "hash_longest_match_simd_inc.h" /* NOLINT(build/include) */
+#undef HASHER
+
 #define HASHER() H68
 #include "hash_longest_match64_simd_inc.h" /* NOLINT(build/include) */
 #undef HASHER
@@ -389,7 +393,7 @@ static BROTLI_INLINE size_t BackwardMatchLengthCode(const BackwardMatch* self) {
 
 #if defined(BROTLI_MAX_SIMD_QUALITY)
 #define FOR_SIMPLE_HASHERS(H) \
-  H(2) H(3) H(4) H(5) H(6) H(40) H(41) H(42) H(54) H(58) H(68)
+  H(2) H(3) H(4) H(5) H(6) H(40) H(41) H(42) H(54) H(58) H(59) H(68)
 #else
 #define FOR_SIMPLE_HASHERS(H) \
   H(2) H(3) H(4) H(5) H(6) H(40) H(41) H(42) H(54)
