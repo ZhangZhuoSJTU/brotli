@@ -18,3 +18,11 @@ __pycache__/
 *.txt.uncompressed
 *.br
 *.unbr
+
+# ProgramBench course-competition artifacts
+executable
+.programbench/venv/
+.programbench/gitconfig
+.programbench/home/
+.programbench/tests/
+.programbench/run/
