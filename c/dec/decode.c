@@ -1142,11 +1142,6 @@ static BrotliDecoderErrorCode DecodeContextMap(brotli_reg_t context_map_size,
             return BROTLI_DECODER_NEEDS_MORE_INPUT;
           }
           reps += (brotli_reg_t)1U << code;
-          BROTLI_LOG_UINT(reps);
-          if (context_index + reps > context_map_size) {
-            return
-                BROTLI_FAILURE(BROTLI_DECODER_ERROR_FORMAT_CONTEXT_MAP_REPEAT);
-          }
           do {
             context_map[context_index++] = 0;
           } while (--reps);
