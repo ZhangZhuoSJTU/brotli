@@ -26,15 +26,10 @@ extern "C" {
 void BrotliInitMemoryManager(
     MemoryManager* m, brotli_alloc_func alloc_func, brotli_free_func free_func,
     void* opaque) {
-  if (!alloc_func) {
-    m->alloc_func = BrotliDefaultAllocFunc;
-    m->free_func = BrotliDefaultFreeFunc;
-    m->opaque = 0;
-  } else {
-    m->alloc_func = alloc_func;
-    m->free_func = free_func;
-    m->opaque = opaque;
-  }
+  const BROTLI_BOOL use_defaults = !alloc_func;
+  m->alloc_func = use_defaults ? BrotliDefaultAllocFunc : alloc_func;
+  m->free_func = use_defaults ? BrotliDefaultFreeFunc : free_func;
+  m->opaque = use_defaults ? 0 : opaque;
 #if !defined(BROTLI_ENCODER_EXIT_ON_OOM)
   m->is_oom = BROTLI_FALSE;
   m->perm_allocated = 0;
