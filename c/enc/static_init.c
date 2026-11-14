@@ -45,13 +45,13 @@ void BrotliEncoderLazyStaticInitInner(void) {
 #endif  /* BROTLI_STATIC_INIT_EARLY */
 
 BROTLI_BOOL BrotliEncoderEnsureStaticInit(void) {
-#if (BROTLI_STATIC_INIT == BROTLI_STATIC_INIT_NONE)
-  return BROTLI_TRUE;
-#elif (BROTLI_STATIC_INIT == BROTLI_STATIC_INIT_EARLY)
-  return kEarlyInitOk;
-#else
-  return kLazyInitOk;
+  BROTLI_BOOL ok = BROTLI_TRUE;
+#if (BROTLI_STATIC_INIT == BROTLI_STATIC_INIT_EARLY)
+  ok = kEarlyInitOk;
+#elif (BROTLI_STATIC_INIT != BROTLI_STATIC_INIT_NONE)
+  ok = kLazyInitOk;
 #endif
+  return ok;
 }
 
 #if defined(__cplusplus) || defined(c_plusplus)
