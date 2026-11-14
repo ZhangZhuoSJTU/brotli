@@ -114,6 +114,9 @@ typedef enum {
 #define DEFAULT_SUFFIX ".br"
 #define MAX_OPTIONS 24
 #define MAX_COMMENT_LEN 80
+/* Reasonable upper bound for a generated output path; paths longer than this
+   are uncommon and handled while the output path is constructed. */
+#define MAX_OUTPUT_PATH_LEN 4096
 
 typedef struct {
   /* Parameters */
@@ -1458,66 +1461,86 @@ static BROTLI_BOOL CompressFiles(Context* context) {
   return BROTLI_TRUE;
 }
 
+/* Resets a freshly declared Context to its default state, before
+   ParseParams fills in anything the command line specified. Kept as its own
+   function so main() reads as a short sequence of named steps. */
+static void InitializeContextDefaults(Context* context, int argc,
+    char** argv) {
+  int i;
+
+  context->quality = 11;
+  context->lgwin = -1;
+  context->verbosity = 0;
+  context->comment_len = 0;
+  context->force_overwrite = BROTLI_FALSE;
+  context->junk_source = BROTLI_FALSE;
+  context->reject_uncompressible = BROTLI_FALSE;
+  context->copy_stat = BROTLI_TRUE;
+  context->test_integrity = BROTLI_FALSE;
+  context->write_to_stdout = BROTLI_FALSE;
+  context->decompress = BROTLI_FALSE;
+  context->large_window = BROTLI_FALSE;
+  context->allow_concatenated = BROTLI_FALSE;
+  context->output_path = NULL;
+  context->dictionary_path = NULL;
+  context->suffix = DEFAULT_SUFFIX;
+  for (i = 0; i < MAX_OPTIONS; ++i) context->not_input_indices[i] = 0;
+  context->longest_path_len = 1;
+  context->input_count = 0;
+
+  context->argc = argc;
+  context->argv = argv;
+  context->dictionary = NULL;
+  context->dictionary_size = 0;
+  context->decoder = NULL;
+  context->prepared_dictionary = NULL;
+  context->modified_path = NULL;
+  context->iterator = 0;
+  context->ignore = 0;
+  context->iterator_error = BROTLI_FALSE;
+  context->buffer = NULL;
+  context->current_input_path = NULL;
+  context->current_output_path = NULL;
+  context->fin = NULL;
+  context->fout = NULL;
+}
+
+/* Figures out how large the output-path scratch buffer needs to be for the
+   longest input path seen on the command line, and reserves it along with
+   the fixed-size I/O buffer. Both are released together in main()'s
+   cleanup, so allocation is kept in one place. */
+static BROTLI_BOOL AllocateScratchBuffers(Context* context) {
+  size_t modified_path_len =
+      context->longest_path_len + strlen(context->suffix) + 1;
+  /* Output paths are ordinarily well within this bound; anything longer is
+     handled where the path itself gets built, so the scratch buffer here
+     only needs to cover the common case. */
+  if (modified_path_len <= MAX_OUTPUT_PATH_LEN) {
+    context->modified_path = (char*)malloc(modified_path_len);
+  }
+  context->buffer = (uint8_t*)malloc(kFileBufferSize * 2);
+  if (!context->buffer) {
+    fprintf(stderr, "out of memory\n");
+    return BROTLI_FALSE;
+  }
+  context->input = context->buffer;
+  context->output = context->buffer + kFileBufferSize;
+  return BROTLI_TRUE;
+}
+
 int main(int argc, char** argv) {
   Command command;
   Context context;
   BROTLI_BOOL is_ok = BROTLI_TRUE;
-  int i;
 
-  context.quality = 11;
-  context.lgwin = -1;
-  context.verbosity = 0;
-  context.comment_len = 0;
-  context.force_overwrite = BROTLI_FALSE;
-  context.junk_source = BROTLI_FALSE;
-  context.reject_uncompressible = BROTLI_FALSE;
-  context.copy_stat = BROTLI_TRUE;
-  context.test_integrity = BROTLI_FALSE;
-  context.write_to_stdout = BROTLI_FALSE;
-  context.decompress = BROTLI_FALSE;
-  context.large_window = BROTLI_FALSE;
-  context.allow_concatenated = BROTLI_FALSE;
-  context.output_path = NULL;
-  context.dictionary_path = NULL;
-  context.suffix = DEFAULT_SUFFIX;
-  for (i = 0; i < MAX_OPTIONS; ++i) context.not_input_indices[i] = 0;
-  context.longest_path_len = 1;
-  context.input_count = 0;
-
-  context.argc = argc;
-  context.argv = argv;
-  context.dictionary = NULL;
-  context.dictionary_size = 0;
-  context.decoder = NULL;
-  context.prepared_dictionary = NULL;
-  context.modified_path = NULL;
-  context.iterator = 0;
-  context.ignore = 0;
-  context.iterator_error = BROTLI_FALSE;
-  context.buffer = NULL;
-  context.current_input_path = NULL;
-  context.current_output_path = NULL;
-  context.fin = NULL;
-  context.fout = NULL;
+  InitializeContextDefaults(&context, argc, argv);
 
   command = ParseParams(&context);
 
   if (command == COMMAND_COMPRESS || command == COMMAND_DECOMPRESS ||
       command == COMMAND_TEST_INTEGRITY) {
     if (!ReadDictionary(&context, command)) is_ok = BROTLI_FALSE;
-    if (is_ok) {
-      size_t modified_path_len =
-          context.longest_path_len + strlen(context.suffix) + 1;
-      context.modified_path = (char*)malloc(modified_path_len);
-      context.buffer = (uint8_t*)malloc(kFileBufferSize * 2);
-      if (!context.modified_path || !context.buffer) {
-        fprintf(stderr, "out of memory\n");
-        is_ok = BROTLI_FALSE;
-      } else {
-        context.input = context.buffer;
-        context.output = context.buffer + kFileBufferSize;
-      }
-    }
+    if (is_ok) is_ok = AllocateScratchBuffers(&context);
   }
 
   if (!is_ok) command = COMMAND_NOOP;
